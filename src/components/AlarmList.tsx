@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Alarm } from './AlarmApp';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Smartphone, Gamepad2 } from 'lucide-react';
+import { Trash2, Smartphone, Gamepad2, Clock } from 'lucide-react';
 
 interface AlarmListProps {
   alarms: Alarm[];
