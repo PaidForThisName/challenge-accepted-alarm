@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Alarm } from './AlarmApp';
 import { ShakeChallenge } from './ShakeChallenge';
@@ -52,6 +51,12 @@ export const ActiveAlarm = ({ alarm, onDismiss }: ActiveAlarmProps) => {
     };
   }, []);
 
+  // For Pac-Man challenge, render as full-screen overlay
+  if (alarm.challengeType === 'pacman') {
+    return <PacmanChallenge onComplete={onDismiss} />;
+  }
+
+  // For shake challenge, keep the card layout
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-900 via-orange-900 to-red-900 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -72,14 +77,10 @@ export const ActiveAlarm = ({ alarm, onDismiss }: ActiveAlarmProps) => {
               </p>
             </div>
 
-            {alarm.challengeType === 'shake' ? (
-              <ShakeChallenge 
-                targetCount={alarm.shakeCount} 
-                onComplete={onDismiss}
-              />
-            ) : (
-              <PacmanChallenge onComplete={onDismiss} />
-            )}
+            <ShakeChallenge 
+              targetCount={alarm.shakeCount} 
+              onComplete={onDismiss}
+            />
           </div>
         </Card>
       </div>
