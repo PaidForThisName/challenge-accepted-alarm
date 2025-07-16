@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 interface Position {
   x: number;
@@ -28,9 +28,10 @@ export const usePacmanGame = () => {
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [direction, setDirection] = useState<'up' | 'down' | 'left' | 'right'>('right');
+  const [gameInitialized, setGameInitialized] = useState(false);
 
-  // Enhanced maze with more complex layout
-  const walls = [
+  // Enhanced maze with more complex layout - memoized to prevent recreating
+  const walls = useMemo(() => [
     // Outer walls
     ...Array.from({ length: GRID_SIZE }, (_, i) => ({ x: 0, y: i })),
     ...Array.from({ length: GRID_SIZE }, (_, i) => ({ x: GRID_SIZE - 1, y: i })),
@@ -45,29 +46,34 @@ export const usePacmanGame = () => {
     { x: 2, y: 12 }, { x: 4, y: 12 }, { x: 6, y: 12 }, { x: 7, y: 12 }, { x: 8, y: 12 }, { x: 10, y: 12 }, { x: 11, y: 12 }, { x: 12, y: 12 }, { x: 14, y: 12 }, { x: 16, y: 12 },
     { x: 2, y: 14 }, { x: 3, y: 14 }, { x: 4, y: 14 }, { x: 5, y: 14 }, { x: 7, y: 14 }, { x: 8, y: 14 }, { x: 9, y: 14 }, { x: 10, y: 14 }, { x: 11, y: 14 }, { x: 13, y: 14 }, { x: 14, y: 14 }, { x: 15, y: 14 }, { x: 16, y: 14 },
     { x: 2, y: 16 }, { x: 4, y: 16 }, { x: 6, y: 16 }, { x: 12, y: 16 }, { x: 14, y: 16 }, { x: 16, y: 16 },
-  ];
+  ], []);
 
   const isWall = useCallback((x: number, y: number) => {
     return walls.some(wall => wall.x === x && wall.y === y);
-  }, []);
+  }, [walls]);
 
-  // Initialize dots
+  // Initialize dots only once
   useEffect(() => {
-    const initialDots: Position[] = [];
-    for (let x = 1; x < GRID_SIZE - 1; x++) {
-      for (let y = 1; y < GRID_SIZE - 1; y++) {
-        if (!isWall(x, y) && 
-            !(x === pacmanPos.x && y === pacmanPos.y) && 
-            !ghosts.some(ghost => ghost.position.x === x && ghost.position.y === y)) {
-          initialDots.push({ x, y });
+    if (!gameInitialized) {
+      const initialDots: Position[] = [];
+      for (let x = 1; x < GRID_SIZE - 1; x++) {
+        for (let y = 1; y < GRID_SIZE - 1; y++) {
+          if (!isWall(x, y) && 
+              !(x === 9 && y === 15) && // Don't place dot on initial pacman position
+              !(x === 9 && y === 7) && !(x === 8 && y === 8) && !(x === 10 && y === 8) && !(x === 9 && y === 8)) { // Don't place dots on ghost positions
+            initialDots.push({ x, y });
+          }
         }
       }
+      setDots(initialDots.slice(0, 30)); // 30 dots for reasonable challenge
+      setGameInitialized(true);
     }
-    setDots(initialDots.slice(0, 30)); // 30 dots for reasonable challenge
-  }, []);
+  }, [gameInitialized, isWall]);
 
   // Ghost AI movement
   useEffect(() => {
+    if (!gameInitialized) return;
+    
     const moveGhosts = () => {
       if (gameOver) return;
 
@@ -115,12 +121,14 @@ export const usePacmanGame = () => {
       );
     };
 
-    const ghostTimer = setInterval(moveGhosts, 300);
+    const ghostTimer = setInterval(moveGhosts, 400); // Slightly slower ghosts
     return () => clearInterval(ghostTimer);
-  }, [pacmanPos, gameOver, isWall]);
+  }, [pacmanPos, gameOver, isWall, gameInitialized]);
 
   // Check collision with ghosts
   useEffect(() => {
+    if (!gameInitialized) return;
+    
     const collision = ghosts.some(ghost => 
       ghost.position.x === pacmanPos.x && ghost.position.y === pacmanPos.y
     );
@@ -128,10 +136,10 @@ export const usePacmanGame = () => {
     if (collision) {
       setGameOver(true);
     }
-  }, [pacmanPos, ghosts]);
+  }, [pacmanPos, ghosts, gameInitialized]);
 
   const movePacman = useCallback((newDirection: 'up' | 'down' | 'left' | 'right') => {
-    if (gameOver) return;
+    if (gameOver || !gameInitialized) return;
 
     setPacmanPos(prevPos => {
       let newX = prevPos.x;
@@ -150,10 +158,12 @@ export const usePacmanGame = () => {
       }
       return prevPos;
     });
-  }, [gameOver, isWall]);
+  }, [gameOver, isWall, gameInitialized]);
 
   // Check for dot collection
   useEffect(() => {
+    if (!gameInitialized) return;
+    
     setDots(prevDots => {
       const newDots = prevDots.filter(dot => 
         !(dot.x === pacmanPos.x && dot.y === pacmanPos.y)
@@ -165,7 +175,7 @@ export const usePacmanGame = () => {
 
       return newDots;
     });
-  }, [pacmanPos]);
+  }, [pacmanPos, gameInitialized]);
 
   const getPacmanRotation = () => {
     switch (direction) {
@@ -176,7 +186,7 @@ export const usePacmanGame = () => {
     }
   };
 
-  const resetGame = () => {
+  const resetGame = useCallback(() => {
     setPacmanPos({ x: 9, y: 15 });
     setGhosts([
       { id: 1, position: { x: 9, y: 7 }, color: 'bg-red-500', target: { x: 9, y: 15 }, mode: 'chase' },
@@ -187,17 +197,8 @@ export const usePacmanGame = () => {
     setScore(0);
     setGameOver(false);
     setDirection('right');
-    // Reinitialize dots
-    const initialDots: Position[] = [];
-    for (let x = 1; x < GRID_SIZE - 1; x++) {
-      for (let y = 1; y < GRID_SIZE - 1; y++) {
-        if (!isWall(x, y) && !(x === 9 && y === 15)) {
-          initialDots.push({ x, y });
-        }
-      }
-    }
-    setDots(initialDots.slice(0, 30));
-  };
+    setGameInitialized(false); // This will trigger dots reinitialization
+  }, []);
 
   return {
     pacmanPos,
@@ -210,7 +211,7 @@ export const usePacmanGame = () => {
     movePacman,
     getPacmanRotation,
     resetGame,
-    isComplete: dots.length === 0 && !gameOver,
+    isComplete: dots.length === 0 && !gameOver && gameInitialized,
     GRID_SIZE
   };
 };
