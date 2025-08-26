@@ -30,6 +30,7 @@ export const PacmanChallenge = ({ onComplete }: PacmanChallengeProps) => {
   // Handle keyboard input
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
+      if (isComplete) return; // freeze controls on win
       event.preventDefault();
       switch (event.key) {
         case 'ArrowUp': movePacman('up'); break;
@@ -45,14 +46,14 @@ export const PacmanChallenge = ({ onComplete }: PacmanChallengeProps) => {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [movePacman, gameOver, resetGame]);
+  }, [movePacman, gameOver, resetGame, isComplete]);
 
-  // Detect game completion but don't auto-dismiss
+  // Auto-dismiss a moment after completion (also stops alarm)
   useEffect(() => {
-    if (isComplete) {
-      console.log('Game completed! All dots collected.');
-    }
-  }, [isComplete]);
+    if (!isComplete) return;
+    const t = setTimeout(onComplete, 1200);
+    return () => clearTimeout(t);
+  }, [isComplete, onComplete]);
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4">
@@ -140,7 +141,7 @@ export const PacmanChallenge = ({ onComplete }: PacmanChallengeProps) => {
             onClick={() => movePacman('up')}
             variant="outline"
             size="sm"
-            disabled={gameOver}
+            disabled={gameOver || isComplete}
             className="border-yellow-400 text-yellow-400 hover:bg-yellow-400/20 disabled:opacity-50"
           >
             <ArrowUp className="w-5 h-5" />
@@ -150,7 +151,7 @@ export const PacmanChallenge = ({ onComplete }: PacmanChallengeProps) => {
               onClick={() => movePacman('left')}
               variant="outline"
               size="sm"
-              disabled={gameOver}
+              disabled={gameOver || isComplete}
               className="border-yellow-400 text-yellow-400 hover:bg-yellow-400/20 disabled:opacity-50"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -169,7 +170,7 @@ export const PacmanChallenge = ({ onComplete }: PacmanChallengeProps) => {
               onClick={() => movePacman('right')}
               variant="outline"
               size="sm"
-              disabled={gameOver}
+              disabled={gameOver || isComplete}
               className="border-yellow-400 text-yellow-400 hover:bg-yellow-400/20 disabled:opacity-50"
             >
               <ArrowRight className="w-5 h-5" />
@@ -179,7 +180,7 @@ export const PacmanChallenge = ({ onComplete }: PacmanChallengeProps) => {
             onClick={() => movePacman('down')}
             variant="outline"
             size="sm"
-            disabled={gameOver}
+            disabled={gameOver || isComplete}
             className="border-yellow-400 text-yellow-400 hover:bg-yellow-400/20 disabled:opacity-50"
           >
             <ArrowDown className="w-5 h-5" />
