@@ -47,7 +47,12 @@ export const PacmanChallenge = ({ onComplete }: PacmanChallengeProps) => {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [movePacman, gameOver, resetGame]);
 
-  // Show completion screen when all dots collected (no auto-dismiss)
+  // Detect game completion but don't auto-dismiss
+  useEffect(() => {
+    if (isComplete) {
+      console.log('Game completed! All dots collected.');
+    }
+  }, [isComplete]);
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4">
