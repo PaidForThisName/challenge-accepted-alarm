@@ -65,7 +65,7 @@ export const usePacmanGame = () => {
           }
         }
       }
-      setDots(initialDots.slice(0, 30)); // 30 dots for reasonable challenge
+      setDots(initialDots); // Place dots everywhere
       setGameInitialized(true);
     }
   }, [gameInitialized, isWall]);
